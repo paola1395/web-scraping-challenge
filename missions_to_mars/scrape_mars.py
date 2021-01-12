@@ -4,18 +4,17 @@ import requests
 from webdriver_manager.chrome import ChromeDriverManager
 from splinter import Browser
 import pandas as pd
-import os
-import time
+import os 
 
 def init_browser():
     executable_path = {'executable_path': ChromeDriverManager().install()}
-    browser = Browser("chrome", **executable_path, headless = False)
+    return Browser("chrome", **executable_path, headless=False)
 
 def scrape():
     browser = init_browser()
     mars_data = {}
 
-##### NASA MARS NEWS #####
+    ##### NASA MARS NEWS #####
 
     #URL of page being scraped
     url= "https://mars.nasa.gov/news/"
@@ -27,18 +26,22 @@ def scrape():
     # Parse HTML with Beautiful Soup
     soup = bs(html, 'html.parser')
 
-    #Extract/Print title
+    #Extract title
     latest_news = soup.find_all('div', class_="list_text")
     news = latest_news[0]
 
     news_title = news.find('div', class_='content_title').text
 
-    #Extract/Print paragraph text
+    #Extract paragraph text
     news_p= news.find('div', class_='article_teaser_body').text
 
     #Add to mars_data dictionary
-    
+    news_title= str(news_title)
+    news_p= str(news_p)
+    mars_data["news_title"]= news_title
+    mars_data["news_p"]= news_p
 
+    
     ##### JPL MARS SPACE IMAGES #####
 
     #URL of page
@@ -49,13 +52,16 @@ def scrape():
     image_html = browser.html
     soup = bs(image_html, 'html.parser')
 
-    #Extract/Print featured image URL
+    #Extract featured image URL
     featured_img_url= soup.find('article')['style'].replace('background-image: url(','').replace(');', '')[1:-1]
 
     main= "https://www.jpl.nasa.gov"
     featured_image_url= main + featured_img_url
 
-    featured_image_url
+    #Add to mars_data dictionary
+    featured_image_url= str(featured_image_url)
+    mars_data["featured_image_url"]= featured_image_url
+
 
     ##### MARS FACTS #####
 
@@ -66,12 +72,15 @@ def scrape():
     mars_facts= pd.read_html(marsfacts_url)
     mars_df= mars_facts[0]
     mars_df.columns= ['Description', 'Value']
-    mars_df
+    mars_df.set_index('Description', inplace=True)
 
     #Convert to HTML
     mars_html= mars_df.to_html()
     mars_facts_html= mars_html.replace('\n', '')
-    mars_facts_html
+
+    #Add to mars_data dictionary
+    mars_data["mars_facts_table"]= mars_facts_html
+
 
     ##### MARS HEMISPHERES #####
 
@@ -111,5 +120,11 @@ def scrape():
             "img_url": img_url
         })
         
-    #Print
-    hemisphere_image_urls
+    #Add to mars_data dictionary
+    mars_data['hemisphere_image_urls']= hemisphere_image_urls
+
+
+    
+    browser.quit()
+
+    return mars_data
